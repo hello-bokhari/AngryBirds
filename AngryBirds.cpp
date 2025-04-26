@@ -2,8 +2,9 @@
 #include <cmath>
 #include <array>
 #include <vector>
+#include <string>
 
-constexpr int MAX_OBSTACLES = 10;
+constexpr int MAX_OBSTACLES = 30;
 constexpr int PROBE_QUANTITY = 10;
 constexpr int VELOCITY_MULTIPLIER = 40;
 constexpr int LAUNCH_MAX_DISTANCE = 100;
@@ -167,10 +168,274 @@ public:
     }
 };
 
+enum class LevelState {
+    PLAYING,
+    COMPLETED,
+    FAILED
+};
+
+class Level {
+public:
+    std::vector<Obstacle> obstacles;
+    std::string name;
+    int targetScore;
+    bool initialized = false;
+    LevelState state = LevelState::PLAYING;
+
+    Level(const std::string& levelName, int requiredScore) : name(levelName), targetScore(requiredScore) {}
+
+    virtual void Initialize(float groundY) = 0;
+
+    void Reset() {
+        for (auto& obs : obstacles) {
+            obs.visible = true;
+        }
+        state = LevelState::PLAYING;
+    }
+
+    int GetCurrentScore() {
+        int score = 0;
+        for (const auto& obs : obstacles) {
+            if (!obs.visible) {
+                score += 10; // 10 points per destroyed obstacle
+            }
+        }
+        return score;
+    }
+
+    void Update() {
+        // Check if level is completed based on score
+        if (GetCurrentScore() >= targetScore) {
+            state = LevelState::COMPLETED;
+        }
+    }
+
+    virtual ~Level() {}
+};
+
+class Level1 : public Level {
+public:
+    Level1() : Level("Starter Tower", 100) {}  // Increased target score from 70 to 100
+
+    void Initialize(float groundY) override {
+        obstacles.clear();
+
+        // Base blocks - wider foundation
+        for (int i = 0; i < 6; ++i) {
+            obstacles.push_back({ { 750.0f + i * 35.0f, groundY - 40.0f, 30.0f, 40.0f }, true, GREEN, DARKGREEN });
+        }
+
+        // Middle row - staggered for stability
+        for (int i = 0; i < 4; ++i) {
+            obstacles.push_back({ { 760.0f + i * 35.0f, groundY - 80.0f, 30.0f, 40.0f }, true, YELLOW, GOLD });
+        }
+
+        // Third row - narrower
+        for (int i = 0; i < 3; ++i) {
+            obstacles.push_back({ { 770.0f + i * 35.0f, groundY - 120.0f, 30.0f, 40.0f }, true, ORANGE, BROWN });
+        }
+
+        // Top blocks
+        obstacles.push_back({ { 785.0f, groundY - 160.0f, 30.0f, 40.0f }, true, RED, MAROON });
+        obstacles.push_back({ { 825.0f, groundY - 160.0f, 30.0f, 40.0f }, true, RED, MAROON });
+
+        // Challenge: Floating platform with obstacles
+        obstacles.push_back({ { 650.0f, groundY - 140.0f, 80.0f, 15.0f }, true, GRAY, BLACK });  // Platform
+        obstacles.push_back({ { 670.0f, groundY - 170.0f, 30.0f, 30.0f }, true, BLUE, DARKBLUE });  // Block on platform
+
+        initialized = true;
+    }
+};
+
+class Level2 : public Level {
+public:
+    Level2() : Level("Fortified Castle", 150) {}  // Increased target score from 120 to 150
+
+    void Initialize(float groundY) override {
+        obstacles.clear();
+
+        // Castle-like structure with defensive elements
+        // Main structure - base level with thicker walls
+        for (int i = 0; i < 8; ++i) {
+            obstacles.push_back({ { 740.0f + i * 40.0f, groundY - 100.0f, 30.0f, 100.0f }, true, GREEN, DARKGREEN });
+        }
+
+        // Second level wall sections
+        for (int i = 0; i < 7; ++i) {
+            if (i == 3) continue; // gap in the middle
+            obstacles.push_back({ { 750.0f + i * 40.0f, groundY - 160.0f, 30.0f, 60.0f }, true, YELLOW, GOLD });
+        }
+
+        // Horizontal reinforcement beams
+        obstacles.push_back({ { 740.0f, groundY - 110.0f, 300.0f, 20.0f }, true, RED, MAROON });
+        obstacles.push_back({ { 750.0f, groundY - 170.0f, 280.0f, 20.0f }, true, RED, MAROON });
+        obstacles.push_back({ { 760.0f, groundY - 230.0f, 260.0f, 20.0f }, true, RED, MAROON });
+
+        // Defensive towers
+        obstacles.push_back({ { 760.0f, groundY - 280.0f, 30.0f, 60.0f }, true, BLUE, DARKBLUE });
+        obstacles.push_back({ { 830.0f, groundY - 280.0f, 30.0f, 60.0f }, true, BLUE, DARKBLUE });
+        obstacles.push_back({ { 900.0f, groundY - 280.0f, 30.0f, 60.0f }, true, BLUE, DARKBLUE });
+        obstacles.push_back({ { 970.0f, groundY - 280.0f, 30.0f, 60.0f }, true, BLUE, DARKBLUE });
+
+        // Top roof structure
+        obstacles.push_back({ { 750.0f, groundY - 290.0f, 250.0f, 20.0f }, true, PURPLE, DARKPURPLE });
+
+        // Obstacle in the center - harder to reach
+        obstacles.push_back({ { 830.0f, groundY - 200.0f, 40.0f, 40.0f }, true, SKYBLUE, BLUE });
+
+        // External defensive wall
+        obstacles.push_back({ { 700.0f, groundY - 70.0f, 20.0f, 70.0f }, true, DARKGRAY, BLACK });
+        obstacles.push_back({ { 1020.0f, groundY - 70.0f, 20.0f, 70.0f }, true, DARKGRAY, BLACK });
+
+        initialized = true;
+    }
+};
+
+class Level3 : public Level {
+public:
+    Level3() : Level("Impenetrable Stronghold", 300) {}  // Increased target score from 200 to 300
+
+    void Initialize(float groundY) override {
+        obstacles.clear();
+
+        // Heavily fortified multi-layer complex
+
+        // Outer defensive walls - thicker and taller
+        for (int i = 0; i < 7; ++i) {
+            obstacles.push_back({ { 650.0f, groundY - 40.0f - i * 40.0f, 40.0f, 40.0f }, true, GRAY, BLACK });
+            obstacles.push_back({ { 950.0f, groundY - 40.0f - i * 40.0f, 40.0f, 40.0f }, true, GRAY, BLACK });
+        }
+
+        // Connecting outer walls bottom
+        for (int i = 0; i < 6; ++i) {
+            obstacles.push_back({ { 690.0f + i * 40.0f, groundY - 40.0f, 40.0f, 40.0f }, true, DARKGRAY, BLACK });
+        }
+
+        // Connecting outer walls top
+        for (int i = 0; i < 6; ++i) {
+            obstacles.push_back({ { 690.0f + i * 40.0f, groundY - 280.0f, 40.0f, 40.0f }, true, DARKGRAY, BLACK });
+        }
+
+        // Inner fortress - main towers
+        for (int i = 0; i < 5; ++i) {
+            obstacles.push_back({ { 700.0f, groundY - 80.0f - i * 40.0f, 40.0f, 40.0f }, true, BLUE, DARKBLUE });
+            obstacles.push_back({ { 900.0f, groundY - 80.0f - i * 40.0f, 40.0f, 40.0f }, true, BLUE, DARKBLUE });
+        }
+
+        // Inner fortress - connecting walls
+        for (int i = 0; i < 4; ++i) {
+            obstacles.push_back({ { 740.0f + i * 40.0f, groundY - 80.0f, 40.0f, 40.0f }, true, RED, MAROON });
+            obstacles.push_back({ { 740.0f + i * 40.0f, groundY - 240.0f, 40.0f, 40.0f }, true, RED, MAROON });
+        }
+
+        // Central structure - layered and reinforced
+        obstacles.push_back({ { 780.0f, groundY - 120.0f, 40.0f, 40.0f }, true, GREEN, DARKGREEN });
+        obstacles.push_back({ { 820.0f, groundY - 120.0f, 40.0f, 40.0f }, true, GREEN, DARKGREEN });
+        obstacles.push_back({ { 780.0f, groundY - 160.0f, 40.0f, 40.0f }, true, YELLOW, GOLD });
+        obstacles.push_back({ { 820.0f, groundY - 160.0f, 40.0f, 40.0f }, true, YELLOW, GOLD });
+        obstacles.push_back({ { 780.0f, groundY - 200.0f, 80.0f, 40.0f }, true, PURPLE, DARKPURPLE });
+
+        // Diagonal reinforcements
+        obstacles.push_back({ { 740.0f, groundY - 120.0f, 40.0f, 20.0f }, true, ORANGE, BROWN });
+        obstacles.push_back({ { 860.0f, groundY - 120.0f, 40.0f, 20.0f }, true, ORANGE, BROWN });
+        obstacles.push_back({ { 740.0f, groundY - 200.0f, 40.0f, 20.0f }, true, ORANGE, BROWN });
+        obstacles.push_back({ { 860.0f, groundY - 200.0f, 40.0f, 20.0f }, true, ORANGE, BROWN });
+
+        // Floating defensive platforms
+        obstacles.push_back({ { 650.0f, groundY - 140.0f, 50.0f, 15.0f }, true, SKYBLUE, BLUE });
+        obstacles.push_back({ { 650.0f, groundY - 170.0f, 30.0f, 30.0f }, true, SKYBLUE, BLUE });
+
+        obstacles.push_back({ { 950.0f, groundY - 140.0f, 50.0f, 15.0f }, true, SKYBLUE, BLUE });
+        obstacles.push_back({ { 960.0f, groundY - 170.0f, 30.0f, 30.0f }, true, SKYBLUE, BLUE });
+
+        // High-value targets in difficult positions
+        obstacles.push_back({ { 800.0f, groundY - 320.0f, 40.0f, 40.0f }, true, GOLD, ORANGE });
+
+        initialized = true;
+    }
+};
+
+// --- Additional difficulty modifications ---
+
+// Add a new, even more challenging level
+class Level4 : public Level {
+public:
+    Level4() : Level("Ultimate Challenge", 400) {}
+
+    void Initialize(float groundY) override {
+        obstacles.clear();
+
+        // Heavily protected multi-layered structure with maze-like components
+
+        // Outer defensive perimeter - thick walls
+        for (int i = 0; i < 10; ++i) {
+            obstacles.push_back({ { 600.0f + i * 80.0f, groundY - 40.0f, 40.0f, 40.0f }, true, GRAY, BLACK });
+        }
+
+        // Defensive towers
+        for (int i = 0; i < 6; ++i) {
+            obstacles.push_back({ { 600.0f, groundY - 40.0f - i * 40.0f, 40.0f, 40.0f }, true, BLUE, DARKBLUE });
+            obstacles.push_back({ { 1000.0f, groundY - 40.0f - i * 40.0f, 40.0f, 40.0f }, true, BLUE, DARKBLUE });
+        }
+
+        // First inner wall
+        for (int i = 0; i < 8; ++i) {
+            obstacles.push_back({ { 640.0f + i * 40.0f, groundY - 80.0f, 40.0f, 40.0f }, true, RED, MAROON });
+        }
+
+        // Second inner wall (offset)
+        for (int i = 0; i < 8; ++i) {
+            if (i == 3 || i == 4) continue; // gap in the middle
+            obstacles.push_back({ { 640.0f + i * 40.0f, groundY - 160.0f, 40.0f, 40.0f }, true, GREEN, DARKGREEN });
+        }
+
+        // Third inner wall (alternating pattern)
+        for (int i = 0; i < 8; ++i) {
+            if (i % 2 == 0) continue; // skip even indices for alternating pattern
+            obstacles.push_back({ { 640.0f + i * 40.0f, groundY - 240.0f, 40.0f, 40.0f }, true, YELLOW, GOLD });
+        }
+
+        // Internal structure - box within a box
+        for (int i = 0; i < 6; ++i) {
+            // Outer box
+            if (i < 5) obstacles.push_back({ { 680.0f + i * 40.0f, groundY - 120.0f, 40.0f, 40.0f }, true, PURPLE, DARKPURPLE });
+            if (i < 5) obstacles.push_back({ { 680.0f + i * 40.0f, groundY - 280.0f, 40.0f, 40.0f }, true, PURPLE, DARKPURPLE });
+            if (i > 0 && i < 4) obstacles.push_back({ { 680.0f, groundY - 120.0f - i * 40.0f, 40.0f, 40.0f }, true, PURPLE, DARKPURPLE });
+            if (i > 0 && i < 4) obstacles.push_back({ { 840.0f, groundY - 120.0f - i * 40.0f, 40.0f, 40.0f }, true, PURPLE, DARKPURPLE });
+
+            // Inner box
+            if (i < 3) obstacles.push_back({ { 720.0f + i * 40.0f, groundY - 160.0f, 40.0f, 40.0f }, true, SKYBLUE, BLUE });
+            if (i < 3) obstacles.push_back({ { 720.0f + i * 40.0f, groundY - 240.0f, 40.0f, 40.0f }, true, SKYBLUE, BLUE });
+            if (i > 0 && i < 2) obstacles.push_back({ { 720.0f, groundY - 160.0f - i * 40.0f, 40.0f, 40.0f }, true, SKYBLUE, BLUE });
+            if (i > 0 && i < 2) obstacles.push_back({ { 800.0f, groundY - 160.0f - i * 40.0f, 40.0f, 40.0f }, true, SKYBLUE, BLUE });
+        }
+
+        // High value target in the center
+        obstacles.push_back({ { 760.0f, groundY - 200.0f, 40.0f, 40.0f }, true, GOLD, ORANGE });
+
+        // Floating and suspended obstacles
+        obstacles.push_back({ { 600.0f, groundY - 160.0f, 40.0f, 10.0f }, true, ORANGE, BROWN });
+        obstacles.push_back({ { 600.0f, groundY - 190.0f, 30.0f, 30.0f }, true, ORANGE, BROWN });
+
+        obstacles.push_back({ { 1000.0f, groundY - 160.0f, 40.0f, 10.0f }, true, ORANGE, BROWN });
+        obstacles.push_back({ { 1000.0f, groundY - 190.0f, 30.0f, 30.0f }, true, ORANGE, BROWN });
+
+        // Suspended platform with high-value target
+        obstacles.push_back({ { 760.0f, groundY - 320.0f, 120.0f, 10.0f }, true, DARKGRAY, BLACK });
+        obstacles.push_back({ { 800.0f, groundY - 350.0f, 40.0f, 30.0f }, true, GOLD, ORANGE });
+
+        initialized = true;
+    }
+};
+
 class GameWorld {
 public:
     Ball ball;
-    std::vector<Obstacle> obstacles;
+    Level* currentLevel = nullptr;
+    Level1 level1;
+    Level2 level2;
+    Level3 level3;
+    Level4 level4;
     Ball* selectedBall = nullptr;
     float xStart = 200, yStart = 0;
     bool launched = false;
@@ -180,6 +445,9 @@ public:
     int xOffset = 0, yOffset = 0;
     Texture2D staringTexture{}, surprisedTexture{}, launchedTexture{};
     bool initialized = false;
+    int currentLevelIndex = 1;
+    int totalScore = 0;
+    int attempts = 3; // Number of attempts per level
 
     void Init() {
         if (initialized) return;
@@ -202,32 +470,42 @@ public:
 
         float groundY = GetScreenHeight() - 40;
 
-        // Clear any existing obstacles
-        obstacles.clear();
+        // Initialize all levels
+        level1.Initialize(groundY);
+        level2.Initialize(groundY);
+        level3.Initialize(groundY);
+        level4.Initialize(groundY);
 
-        // 1. Base level: wider foundation
-        for (int i = 0; i < 7; ++i) {
-            obstacles.push_back({ { 750.0f + i * 40.0f, groundY - 100.0f, 30.0f, 100.0f }, true, GREEN, DARKGREEN });
-        }
+        // Set the current level
+        SetLevel(1);
 
-        // 2. Middle level: vertical blocks
-        for (int i = 0; i < 3; ++i) {
-            obstacles.push_back({ { 770.0f + i * 40.0f, groundY - 100.0f, 30.0f, 80.0f }, true, YELLOW, GOLD });
-        }
-
-        // 3. Horizontal planks
-        obstacles.push_back({ { 750, groundY - 100, 250, 20 }, true, RED, MAROON });
-        obstacles.push_back({ { 770, groundY - 210, 120, 20 }, true, RED, MAROON });
-
-        // 4. Top vertical blocks
-        obstacles.push_back({ { 790, groundY - 260, 30, 60 }, true, BLUE, DARKBLUE });
-        obstacles.push_back({ { 840, groundY - 260, 30, 60 }, true, BLUE, DARKBLUE });
-
-        // 5. Roof plank
-        obstacles.push_back({ { 790, groundY - 280, 80, 20 }, true, PURPLE, DARKPURPLE });
-
-        Reset();
         initialized = true;
+    }
+
+    void SetLevel(int levelNum) {
+        Reset(); // Reset ball position and other game state
+
+        switch (levelNum) {
+        case 1:
+            currentLevel = &level1;
+            break;
+        case 2:
+            currentLevel = &level2;
+            break;
+        case 3:
+            currentLevel = &level3;
+            break;
+        case 4:
+            currentLevel = &level4;
+            break;
+        default:
+            currentLevel = &level1;
+            break;
+        }
+
+        currentLevelIndex = levelNum;
+        attempts = 3; // Reset attempts for the new level
+        currentLevel->Reset();
     }
 
     void Destroy() {
@@ -238,6 +516,21 @@ public:
     }
 
     void Update() {
+        if (currentLevel->state == LevelState::COMPLETED) {
+            // Level completed logic
+            if (currentLevelIndex < 4) {
+                // Advance to next level after 2 seconds
+                static float completionTime = 0;
+                completionTime += GetFrameTime();
+
+                if (completionTime > 2.0f) {
+                    SetLevel(currentLevelIndex + 1);
+                    completionTime = 0;
+                }
+            }
+            return;
+        }
+
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
             Vector2 mousePos = GetMousePosition();
             if (CheckCollisionPointCircle(mousePos, ball.pos, ball.radius)) {
@@ -274,16 +567,28 @@ public:
         if (IsMouseButtonReleased(MOUSE_BUTTON_LEFT)) {
             if (selectedBall && (ball.pos.x != xStart || ball.pos.y != yStart)) {
                 launched = true;
+                attempts--;
             }
             selectedBall = nullptr;
         }
 
         if (launched) {
-            for (auto& obs : obstacles) {
+            bool hitAny = false;
+
+            for (auto& obs : currentLevel->obstacles) {
                 if (ball.CollidesWith(obs)) {
-                    obs.visible = false;
-                    ball.vel.x *= ball.elasticity;
+                    if (obs.visible) {
+                        hitAny = true;
+                        obs.visible = false;
+                        ball.vel.x *= ball.elasticity;
+                    }
                 }
+            }
+
+            if (hitAny) {
+                // Update the score and check if level is completed
+                currentLevel->Update();
+                totalScore = level1.GetCurrentScore() + level2.GetCurrentScore() + level3.GetCurrentScore() + level4.GetCurrentScore();
             }
 
             if (ball.pos.y + ball.radius > GetScreenHeight()) {
@@ -298,16 +603,49 @@ public:
             ball.rotationAngle += 5;
             ball.vel.x *= ball.friction;
             ball.vel.y *= ball.friction;
+
+            // Check if ball has stopped moving
+            if (fabs(ball.vel.x) < 0.1f && fabs(ball.vel.y) < 0.1f && ball.pos.y > GetScreenHeight() - ball.radius - 1) {
+                // Reset ball if no more attempts left
+                if (attempts <= 0) {
+                    // Check if level is completed
+                    if (currentLevel->state != LevelState::COMPLETED) {
+                        currentLevel->state = LevelState::FAILED;
+                    }
+                }
+
+                // Only reset the ball position, not the obstacles
+                ball.pos = { xStart, yStart };
+                ball.vel = { 50, -50 };
+                ball.rotationAngle = 0;
+                launched = false;
+            }
         }
 
         if (IsMouseButtonPressed(MOUSE_BUTTON_RIGHT) || IsKeyPressed(KEY_SPACE)) {
             Reset();
+            currentLevel->Reset();
+            attempts = 3;
+        }
+
+        // Level selection keys
+        if (IsKeyPressed(KEY_ONE)) {
+            SetLevel(1);
+        }
+        else if (IsKeyPressed(KEY_TWO)) {
+            SetLevel(2);
+        }
+        else if (IsKeyPressed(KEY_THREE)) {
+            SetLevel(3);
+        }
+        else if (IsKeyPressed(KEY_FOUR)) {
+            SetLevel(4);
         }
     }
 
     void Reset() {
-        for (auto& obs : obstacles) obs.visible = true;
         ball.pos = { xStart, yStart };
+        ball.vel = { 50, -50 };
         ball.rotationAngle = 0;
         launched = false;
         selectedBall = nullptr;
@@ -336,13 +674,60 @@ public:
 
         // Ball and obstacles
         ball.Draw(launched, selectedBall, xStart, yStart);
-        for (const auto& obs : obstacles) obs.Draw();
+        for (const auto& obs : currentLevel->obstacles) obs.Draw();
+
+        // Draw HUD
+        DrawRectangle(0, 0, GetScreenWidth(), 50, { 0, 0, 0, 120 });
+
+        // Draw level info
+        DrawText(TextFormat("Level %d: %s", currentLevelIndex, currentLevel->name.c_str()), 10, 10, 20, WHITE);
+        DrawText(TextFormat("Score: %d/%d", currentLevel->GetCurrentScore(), currentLevel->targetScore), 400, 10, 20, WHITE);
+        DrawText(TextFormat("Total Score: %d", totalScore), 600, 10, 20, WHITE);
+        DrawText(TextFormat("Attempts: %d", attempts), 800, 10, 20, WHITE);
+
+        // Draw level status message
+        if (currentLevel->state == LevelState::COMPLETED) {
+            const char* message = "LEVEL COMPLETED!";
+            int fontSize = 40;
+            int textWidth = MeasureText(message, fontSize);
+            DrawRectangle((GetScreenWidth() - textWidth) / 2 - 10, GetScreenHeight() / 2 - 30, textWidth + 20, 60, { 0, 0, 0, 200 });
+            DrawText(message, (GetScreenWidth() - textWidth) / 2, GetScreenHeight() / 2 - 20, fontSize, GREEN);
+
+            if (currentLevelIndex < 3) {
+                const char* nextMessage = "Next level loading...";
+                int nextFontSize = 20;
+                int nextTextWidth = MeasureText(nextMessage, nextFontSize);
+                DrawText(nextMessage, (GetScreenWidth() - nextTextWidth) / 2, GetScreenHeight() / 2 + 30, nextFontSize, WHITE);
+            }
+            else {
+                const char* finalMessage = "Congratulations! You completed all levels!";
+                int finalFontSize = 20;
+                int finalTextWidth = MeasureText(finalMessage, finalFontSize);
+                DrawText(finalMessage, (GetScreenWidth() - finalTextWidth) / 2, GetScreenHeight() / 2 + 30, finalFontSize, WHITE);
+            }
+        }
+        else if (currentLevel->state == LevelState::FAILED && attempts <= 0) {
+            const char* message = "NO ATTEMPTS LEFT!";
+            int fontSize = 40;
+            int textWidth = MeasureText(message, fontSize);
+            DrawRectangle((GetScreenWidth() - textWidth) / 2 - 10, GetScreenHeight() / 2 - 30, textWidth + 20, 60, { 0, 0, 0, 200 });
+            DrawText(message, (GetScreenWidth() - textWidth) / 2, GetScreenHeight() / 2 - 20, fontSize, RED);
+
+            const char* retryMessage = "Press SPACE to retry";
+            int retryFontSize = 20;
+            int retryTextWidth = MeasureText(retryMessage, retryFontSize);
+            DrawText(retryMessage, (GetScreenWidth() - retryTextWidth) / 2, GetScreenHeight() / 2 + 30, retryFontSize, WHITE);
+        }
+
+        // Draw controls
+        DrawText("Controls: 1,2,3,4 - Select Level | SPACE - Reset | ESC - Menu", 10, GetScreenHeight() - 30, 20, WHITE);
     }
 };
 
 enum GameState {
     MENU,
     PLAYING,
+    LEVEL_SELECT,
     EXIT_GAME
 };
 
@@ -351,7 +736,7 @@ int main()
     const int screenWidth = 1280;
     const int screenHeight = 720;
 
-    InitWindow(screenWidth, screenHeight, "Angry Me :D - Prof. Dr. David Buzatto");
+    InitWindow(screenWidth, screenHeight, "Angry Me :D - Multi-Level Edition");
     SetTargetFPS(60);
 
     // --- Menu Assets ---
@@ -449,9 +834,6 @@ int main()
 
         case PLAYING: {
             game.Draw();
-
-            // Display instructions
-            DrawText("Right-Click or SPACE to Reset | ESC to Menu", 10, 10, 20, WHITE);
             break;
         }
 
