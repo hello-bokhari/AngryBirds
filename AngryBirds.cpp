@@ -444,6 +444,7 @@ public:
     int launchDistance = 0;
     int xOffset = 0, yOffset = 0;
     Texture2D staringTexture{}, surprisedTexture{}, launchedTexture{};
+    Texture2D levelBackgroundTexture{};
     bool initialized = false;
     int currentLevelIndex = 1;
     int totalScore = 0;
@@ -455,6 +456,7 @@ public:
         staringTexture = LoadTexture("resources/meStaring.png");
         surprisedTexture = LoadTexture("resources/meSurprised.png");
         launchedTexture = LoadTexture("resources/meLaunched.png");
+        levelBackgroundTexture = LoadTexture("graphics/level_image.png");
 
         yStart = GetScreenHeight() - 200;
 
@@ -512,6 +514,7 @@ public:
         UnloadTexture(staringTexture);
         UnloadTexture(surprisedTexture);
         UnloadTexture(launchedTexture);
+        UnloadTexture(levelBackgroundTexture);
         initialized = false;
     }
 
@@ -652,6 +655,7 @@ public:
     }
 
     void Draw() {
+        /*
         ClearBackground({ 135, 206, 235, 255 }); // Sky blue
 
         // Sun
@@ -668,6 +672,33 @@ public:
 
         // Ground platform
         DrawRectangle(0, GetScreenHeight() - 40, GetScreenWidth(), 40, { 34, 139, 34, 255 }); // Forest green
+
+        */
+        // ---- START: CORRECTED BACKGROUND DRAWING ----
+        ClearBackground(RAYWHITE); // Clear to a default color first (optional)
+
+        // Check if the texture (loaded in Init) is valid before drawing
+        if (levelBackgroundTexture.id > 0) {
+            // Draw the texture that was loaded ONCE in the Init() function
+            // Use DrawTexturePro to stretch it to the screen size
+            DrawTexturePro(levelBackgroundTexture,
+                { 0.0f, 0.0f, (float)levelBackgroundTexture.width, (float)levelBackgroundTexture.height }, // Source rect (entire texture)
+                { 0.0f, 0.0f, (float)GetScreenWidth(), (float)GetScreenHeight() }, // Destination rect (entire screen)
+                { 0, 0 }, // Origin (top-left)
+                0.0f,     // Rotation
+                WHITE);   // Tint color
+
+            // OR, if you don't want stretching, use this instead:
+            // DrawTexture(levelBackgroundTexture, 0, 0, WHITE);
+
+        }
+        else {
+            // Fallback if texture failed to load in Init(): Draw a simple background
+            ClearBackground(DARKGRAY); // Or any other color
+            DrawText("Failed to load background texture!", 10, GetScreenHeight() / 2, 20, RED);
+        }
+        // ---- END: CORRECTED BACKGROUND DRAWING ----
+
 
         // Slingshot stand
         DrawRectangle(xStart - 10, yStart - ball.radius - 10, 20, ball.radius * 2 + 130, { 100, 100, 100, 200 });
