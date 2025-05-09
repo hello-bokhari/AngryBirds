@@ -597,11 +597,10 @@ public:
         // Check if player can afford the power-up
         canUsePowerup = totalScore >= powerupCost;
 
-        // Check for power-up button click
-        if (launched && canUsePowerup && !powerupActive && !ball.isSplit) {
-            Vector2 mousePos = GetMousePosition();
-            if (CheckCollisionPointRec(mousePos, powerupButton) && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
-                // Activate power-up
+        // Check for mouse click to activate split power-up while in flight
+        if (launched && canUsePowerup && !powerupActive && !ball.isSplit && ball.isActive) {
+            if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                // Activate power-up on left click during flight
                 ActivateSplitPowerup();
             }
         }
