@@ -45,10 +45,15 @@ public:
     Texture2D staringTexture{};
     Texture2D surprisedTexture{};
     Texture2D launchedTexture{};
+    Texture2D splitTexture{}; // New texture for split birds
     Color fillColor = BLUE;
     Color strokeColor = DARKBLUE;
+    bool isSplit = false; // Flag to indicate if this is a split ball
+    bool isActive = true; // Flag to indicate if the ball is active
 
-    void Draw(bool launched, Ball* selectedBall, float xStart, float yStart) {
+    void Draw(bool launched, Ball* selectedBall, float xStart, float yStart) const {
+        if (!isActive) return; // Don't draw if not active
+
         if (!launched) {
             DrawLine(xStart, yStart, pos.x, pos.y, BLACK);
             float px = pos.x, py = pos.y;
@@ -67,14 +72,18 @@ public:
         Texture2D textureToDraw = staringTexture;
         if (selectedBall != nullptr)
             textureToDraw = surprisedTexture;
-        else if (launched)
-            textureToDraw = launchedTexture;
+        else if (launched) {
+            textureToDraw = isSplit ? splitTexture : launchedTexture;
+        }
+
+        // Adjust size if it's a split ball
+        float drawRadius = isSplit ? radius * 0.7f : radius;
 
         DrawTexturePro(
             textureToDraw,
             { 0, 0, 420, 420 },
-            { pos.x, pos.y, radius * 2, radius * 2 },
-            { (float)radius, (float)radius },
+            { pos.x, pos.y, drawRadius * 2, drawRadius * 2 },
+            { (float)drawRadius, (float)drawRadius },
             rotationAngle,
             WHITE
         );
@@ -84,11 +93,12 @@ public:
         float p = forX ? pos.x : pos.y;
         float angleRad = toRadians(collisionProbes[probeIndex % PROBE_QUANTITY]);
         float t = forX ? cosf(angleRad) : sinf(angleRad);
-        return p + radius * ((probeIndex / PROBE_QUANTITY) > 0 ? 0.5f : 1.0f) * t;
+        float probeRadius = isSplit ? radius * 0.7f : radius; // Adjust collision radius if split
+        return p + probeRadius * ((probeIndex / PROBE_QUANTITY) > 0 ? 0.5f : 1.0f) * t;
     }
 
     bool CollidesWith(const Obstacle& obs) {
-        if (!obs.visible) return false;
+        if (!obs.visible || !isActive) return false; // Don't check collision if not active
 
         for (int i = 0; i < PROBE_QUANTITY * 2; ++i) {
             Vector2 point = { GetProbePosition(true, i), GetProbePosition(false, i) };
@@ -98,6 +108,25 @@ public:
         }
 
         return false;
+    }
+
+    // Create a split version of this ball
+    Ball CreateSplitBall(float angleOffset) const {
+        Ball splitBall = *this; // Copy current ball properties
+
+        // Adjust properties for split ball
+        splitBall.isSplit = true;
+        splitBall.radius *= 0.7f; // Make split balls smaller
+
+        // Adjust velocity based on the angle offset
+        float currentAngle = atan2f(vel.y, vel.x);
+        float newAngle = currentAngle + toRadians(angleOffset);
+        float speed = sqrtf(vel.x * vel.x + vel.y * vel.y);
+
+        splitBall.vel.x = cosf(newAngle) * speed;
+        splitBall.vel.y = sinf(newAngle) * speed;
+
+        return splitBall;
     }
 };
 
@@ -438,6 +467,7 @@ public:
 class GameWorld {
 public:
     Ball ball;
+    std::vector<Ball> splitBalls; // Vector to store split balls
     Level* currentLevel = nullptr;
     Level1 level1;
     Level2 level2;
@@ -450,12 +480,19 @@ public:
     double relativeAngle = 0;
     int launchDistance = 0;
     int xOffset = 0, yOffset = 0;
-    Texture2D staringTexture{}, surprisedTexture{}, launchedTexture{};
+    Texture2D staringTexture{}, surprisedTexture{}, launchedTexture{}, splitTexture{};
     Texture2D levelBackgroundTexture{};
+    Texture2D powerupButtonTexture{}; // Texture for power-up button
     bool initialized = false;
     int currentLevelIndex = 1;
     int totalScore = 0;
     int attempts = 3; // Number of attempts per level
+
+    // Power-up system
+    int powerupCost = 50; // Cost of using the split power-up
+    bool canUsePowerup = false; // Flag to indicate if power-up can be used
+    bool powerupActive = false; // Flag to indicate if power-up is active
+    Rectangle powerupButton; // Power-up button rectangle
 
     void Init() {
         if (initialized) return;
@@ -463,7 +500,17 @@ public:
         staringTexture = LoadTexture("resources/meStaring.png");
         surprisedTexture = LoadTexture("resources/meSurprised.png");
         launchedTexture = LoadTexture("resources/meLaunched.png");
+        splitTexture = LoadTexture("resources/meSplit.png"); // Load new texture for split birds
         levelBackgroundTexture = LoadTexture("graphics/level_image.png");
+        powerupButtonTexture = LoadTexture("graphics/powerup_button.png"); // Load power-up button texture
+
+        // If the splitTexture fails to load, use the launchedTexture as fallback
+        if (splitTexture.id == 0) {
+            splitTexture = launchedTexture;
+        }
+
+        // Initialize power-up button position and size
+        powerupButton = { GetScreenWidth() - 150.0f, 60.0f, 100.0f, 40.0f };
 
         yStart = GetScreenHeight() - 200;
 
@@ -476,6 +523,7 @@ public:
         ball.staringTexture = staringTexture;
         ball.surprisedTexture = surprisedTexture;
         ball.launchedTexture = launchedTexture;
+        ball.splitTexture = splitTexture;
 
         float groundY = GetScreenHeight() - 40;
 
@@ -521,7 +569,9 @@ public:
         UnloadTexture(staringTexture);
         UnloadTexture(surprisedTexture);
         UnloadTexture(launchedTexture);
+        UnloadTexture(splitTexture);
         UnloadTexture(levelBackgroundTexture);
+        UnloadTexture(powerupButtonTexture);
         initialized = false;
     }
 
@@ -541,9 +591,24 @@ public:
             return;
         }
 
+        // Update total score
+        totalScore = level1.GetCurrentScore() + level2.GetCurrentScore() + level3.GetCurrentScore() + level4.GetCurrentScore();
+
+        // Check if player can afford the power-up
+        canUsePowerup = totalScore >= powerupCost;
+
+        // Check for power-up button click
+        if (launched && canUsePowerup && !powerupActive && !ball.isSplit) {
+            Vector2 mousePos = GetMousePosition();
+            if (CheckCollisionPointRec(mousePos, powerupButton) && IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
+                // Activate power-up
+                ActivateSplitPowerup();
+            }
+        }
+
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
             Vector2 mousePos = GetMousePosition();
-            if (CheckCollisionPointCircle(mousePos, ball.pos, ball.radius)) {
+            if (CheckCollisionPointCircle(mousePos, ball.pos, ball.radius) && !launched) {
                 selectedBall = &ball;
                 xOffset = mousePos.x - ball.pos.x;
                 yOffset = mousePos.y - ball.pos.y;
@@ -578,45 +643,35 @@ public:
             if (selectedBall && (ball.pos.x != xStart || ball.pos.y != yStart)) {
                 launched = true;
                 attempts--;
+                powerupActive = false;
             }
             selectedBall = nullptr;
         }
 
         if (launched) {
-            bool hitAny = false;
+            // Update main ball
+            if (ball.isActive) {
+                UpdateBall(ball);
+            }
 
-            for (auto& obs : currentLevel->obstacles) {
-                if (ball.CollidesWith(obs)) {
-                    if (obs.visible) {
-                        hitAny = true;
-                        obs.visible = false;
-                        ball.vel.x *= ball.elasticity;
-                    }
+            // Update split balls
+            for (auto& splitBall : splitBalls) {
+                if (splitBall.isActive) {
+                    UpdateBall(splitBall);
                 }
             }
 
-            if (hitAny) {
-                // Update the score and check if level is completed
-                currentLevel->Update();
-                totalScore = level1.GetCurrentScore() + level2.GetCurrentScore() + level3.GetCurrentScore() + level4.GetCurrentScore();
+            // Check if all balls have stopped
+            bool allBallsStopped = !ball.isActive;
+            for (const auto& splitBall : splitBalls) {
+                if (splitBall.isActive) {
+                    allBallsStopped = false;
+                    break;
+                }
             }
 
-            if (ball.pos.y + ball.radius > GetScreenHeight()) {
-                ball.pos.y = GetScreenHeight() - ball.radius;
-                ball.vel.y *= -ball.elasticity;
-            }
-
-            ball.pos.x += ball.vel.x;
-            ball.pos.y += ball.vel.y;
-            ball.vel.y += GRAVITY;
-
-            ball.rotationAngle += 5;
-            ball.vel.x *= ball.friction;
-            ball.vel.y *= ball.friction;
-
-            // Check if ball has stopped moving
-            if (fabs(ball.vel.x) < 0.1f && fabs(ball.vel.y) < 0.1f && ball.pos.y > GetScreenHeight() - ball.radius - 1) {
-                // Reset ball if no more attempts left
+            if (allBallsStopped) {
+                // Reset if no more attempts left
                 if (attempts <= 0) {
                     // Check if level is completed
                     if (currentLevel->state != LevelState::COMPLETED) {
@@ -625,10 +680,7 @@ public:
                 }
 
                 // Only reset the ball position, not the obstacles
-                ball.pos = { xStart, yStart };
-                ball.vel = { 50, -50 };
-                ball.rotationAngle = 0;
-                launched = false;
+                ResetBalls();
             }
         }
 
@@ -653,66 +705,110 @@ public:
         }
     }
 
+    void UpdateBall(Ball& currentBall) {
+        bool hitAny = false;
+
+        for (auto& obs : currentLevel->obstacles) {
+            if (currentBall.CollidesWith(obs)) {
+                if (obs.visible) {
+                    hitAny = true;
+                    obs.visible = false;
+                    currentBall.vel.x *= currentBall.elasticity;
+                }
+            }
+        }
+
+        if (hitAny) {
+            // Update the score and check if level is completed
+            currentLevel->Update();
+        }
+
+        if (currentBall.pos.y + currentBall.radius > GetScreenHeight()) {
+            currentBall.pos.y = GetScreenHeight() - currentBall.radius;
+            currentBall.vel.y *= -currentBall.elasticity;
+        }
+
+        currentBall.pos.x += currentBall.vel.x;
+        currentBall.pos.y += currentBall.vel.y;
+        currentBall.vel.y += GRAVITY;
+
+        currentBall.rotationAngle += 5;
+        currentBall.vel.x *= currentBall.friction;
+        currentBall.vel.y *= currentBall.friction;
+
+        // Check if ball has stopped moving
+        if (fabs(currentBall.vel.x) < 0.1f && fabs(currentBall.vel.y) < 0.1f &&
+            currentBall.pos.y > GetScreenHeight() - currentBall.radius - 1) {
+            currentBall.isActive = false;
+        }
+    }
+
+    void ActivateSplitPowerup() {
+        if (!canUsePowerup || !launched || ball.isSplit || splitBalls.size() > 0) return;
+
+        // Deduct the cost
+        totalScore -= powerupCost;
+        powerupActive = true;
+
+        // Create two split balls with different angles
+        splitBalls.push_back(ball.CreateSplitBall(-30.0f)); // Split at -30 degrees
+        splitBalls.push_back(ball.CreateSplitBall(30.0f));  // Split at +30 degrees
+
+        // Make the main ball a split ball too
+        ball.isSplit = true;
+        ball.radius *= 0.7f; // Make the main ball smaller too
+    }
+
     void Reset() {
+        ResetBalls();
+        splitBalls.clear();
+        powerupActive = false;
+    }
+
+    void ResetBalls() {
         ball.pos = { xStart, yStart };
         ball.vel = { 50, -50 };
         ball.rotationAngle = 0;
+        ball.isSplit = false;
+        ball.isActive = true;
+        ball.radius = 40; // Reset to original size
         launched = false;
         selectedBall = nullptr;
+        splitBalls.clear();
     }
 
     void Draw() {
-        /*
-        ClearBackground({ 135, 206, 235, 255 }); // Sky blue
-
-        // Sun
-        DrawCircle(100, 100, 50, YELLOW);
-
-        // Clouds
-        DrawCloud(300, 80);
-        DrawCloud(600, 120, 2);
-        DrawCloud(950, 60);
-
-        // Distant hills
-        DrawCircle(GetScreenWidth() / 3, GetScreenHeight(), 200, GREEN);
-        DrawCircle(GetScreenWidth() * 2 / 3, GetScreenHeight(), 250, DARKGREEN);
-
-        // Ground platform
-        DrawRectangle(0, GetScreenHeight() - 40, GetScreenWidth(), 40, { 34, 139, 34, 255 }); // Forest green
-
-        */
-        // ---- START: CORRECTED BACKGROUND DRAWING ----
-        ClearBackground(RAYWHITE); // Clear to a default color first (optional)
-
-        // Check if the texture (loaded in Init) is valid before drawing
+        // Draw background
         if (levelBackgroundTexture.id > 0) {
-            // Draw the texture that was loaded ONCE in the Init() function
-            // Use DrawTexturePro to stretch it to the screen size
             DrawTexturePro(levelBackgroundTexture,
-                { 0.0f, 0.0f, (float)levelBackgroundTexture.width, (float)levelBackgroundTexture.height }, // Source rect (entire texture)
-                { 0.0f, 0.0f, (float)GetScreenWidth(), (float)GetScreenHeight() }, // Destination rect (entire screen)
-                { 0, 0 }, // Origin (top-left)
-                0.0f,     // Rotation
-                WHITE);   // Tint color
-
-            // OR, if you don't want stretching, use this instead:
-            // DrawTexture(levelBackgroundTexture, 0, 0, WHITE);
-
+                { 0.0f, 0.0f, (float)levelBackgroundTexture.width, (float)levelBackgroundTexture.height },
+                { 0.0f, 0.0f, (float)GetScreenWidth(), (float)GetScreenHeight() },
+                { 0, 0 },
+                0.0f,
+                WHITE);
         }
         else {
-            // Fallback if texture failed to load in Init(): Draw a simple background
-            ClearBackground(DARKGRAY); // Or any other color
+            ClearBackground(DARKGRAY);
             DrawText("Failed to load background texture!", 10, GetScreenHeight() / 2, 20, RED);
         }
-        // ---- END: CORRECTED BACKGROUND DRAWING ----
-
 
         // Slingshot stand
         DrawRectangle(xStart - 10, yStart - ball.radius - 10, 20, ball.radius * 2 + 130, { 100, 100, 100, 200 });
 
-        // Ball and obstacles
-        ball.Draw(launched, selectedBall, xStart, yStart);
+        // Draw obstacles
         for (const auto& obs : currentLevel->obstacles) obs.Draw();
+
+        // Draw split balls
+        for (const auto& splitBall : splitBalls) {
+            if (splitBall.isActive) {
+                splitBall.Draw(launched, nullptr, xStart, yStart);
+            }
+        }
+
+        // Draw main ball
+        if (ball.isActive) {
+            ball.Draw(launched, selectedBall, xStart, yStart);
+        }
 
         // Draw HUD
         DrawRectangle(0, 0, GetScreenWidth(), 50, { 0, 0, 0, 120 });
@@ -723,6 +819,22 @@ public:
         DrawText(TextFormat("Total Score: %d", totalScore), 600, 10, 20, WHITE);
         DrawText(TextFormat("Attempts: %d", attempts), 800, 10, 20, WHITE);
 
+        // Draw power-up button
+        if (powerupButtonTexture.id > 0) {
+            DrawTexturePro(powerupButtonTexture,
+                { 0.0f, 0.0f, (float)powerupButtonTexture.width, (float)powerupButtonTexture.height },
+                powerupButton,
+                { 0, 0 },
+                0.0f,
+                canUsePowerup && launched && !powerupActive && !ball.isSplit ? WHITE : GRAY);
+        }
+        else {
+            DrawRectangleRec(powerupButton, canUsePowerup && launched && !powerupActive && !ball.isSplit ? BLUE : DARKGRAY);
+            DrawRectangleLinesEx(powerupButton, 2, BLACK);
+            DrawText("SPLIT", powerupButton.x + 10, powerupButton.y + 10, 20, WHITE);
+        }
+        DrawText(TextFormat("Cost: %d", powerupCost), powerupButton.x, powerupButton.y + powerupButton.height + 5, 16, WHITE);
+
         // Draw level status message
         if (currentLevel->state == LevelState::COMPLETED) {
             const char* message = "LEVEL COMPLETED!";
@@ -731,7 +843,7 @@ public:
             DrawRectangle((GetScreenWidth() - textWidth) / 2 - 10, GetScreenHeight() / 2 - 30, textWidth + 20, 60, { 0, 0, 0, 200 });
             DrawText(message, (GetScreenWidth() - textWidth) / 2, GetScreenHeight() / 2 - 20, fontSize, GREEN);
 
-            if (currentLevelIndex < 3) {
+            if (currentLevelIndex < 4) {
                 const char* nextMessage = "Next level loading...";
                 int nextFontSize = 20;
                 int nextTextWidth = MeasureText(nextMessage, nextFontSize);
@@ -757,8 +869,9 @@ public:
             DrawText(retryMessage, (GetScreenWidth() - retryTextWidth) / 2, GetScreenHeight() / 2 + 30, retryFontSize, WHITE);
         }
 
-        // Draw controls
+        // Draw controls and power-up instructions
         DrawText("Controls: 1,2,3,4 - Select Level | SPACE - Reset | ESC - Menu", 10, GetScreenHeight() - 30, 20, WHITE);
+        DrawText("Click the SPLIT button during flight to activate power-up!", 10, GetScreenHeight() - 60, 20, YELLOW);
     }
 };
 
