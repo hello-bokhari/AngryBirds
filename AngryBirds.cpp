@@ -252,35 +252,49 @@ public:
     virtual ~Level() {}
 };
 
+
 class Level1 : public Level {
 public:
-    Level1() : Level("Starter Tower", 100) {}  // Increased target score from 70 to 100
+    Level1() : Level("Starter Tower", 100) {}  // Target score remains 100
 
     void Initialize(float groundY) override {
         obstacles.clear();
 
-        // Base blocks - wider foundation
-        for (int i = 0; i < 6; ++i) {
-            obstacles.push_back({ { 750.0f + i * 35.0f, groundY - 40.0f, 30.0f, 40.0f }, true, GREEN, DARKGREEN });
+        float centerX = 800.0f; // Center point of the tower
+        float blockWidth = 30.0f;
+        float blockHeight = 40.0f;
+        float blockSpacing = 35.0f; // Distance between block centers
+
+        // Base layer - 9 blocks wide for a solid foundation
+        int baseLayerSize = 9;
+        float baseStartX = centerX - ((baseLayerSize - 1) * blockSpacing / 2);
+        for (int i = 0; i < baseLayerSize; ++i) {
+            obstacles.push_back({ { baseStartX + i * blockSpacing, groundY - blockHeight, blockWidth, blockHeight }, true, GREEN, DARKGREEN });
         }
 
-        // Middle row - staggered for stability
-        for (int i = 0; i < 5; ++i) {
-            obstacles.push_back({ { 760.0f + i * 35.0f, groundY - 80.0f, 30.0f, 40.0f }, true, YELLOW, GOLD });
+        // Second layer - 7 blocks wide, perfectly aligned on the base
+        int secondLayerSize = 7;
+        float secondStartX = centerX - ((secondLayerSize - 1) * blockSpacing / 2);
+        for (int i = 0; i < secondLayerSize; ++i) {
+            obstacles.push_back({ { secondStartX + i * blockSpacing, groundY - blockHeight * 2, blockWidth, blockHeight }, true, YELLOW, GOLD });
         }
 
-        // Third row - narrower
-        for (int i = 0; i < 4; ++i) {
-            obstacles.push_back({ { 770.0f + i * 35.0f, groundY - 120.0f, 30.0f, 40.0f }, true, ORANGE, BROWN });
+        // Third layer - 5 blocks wide
+        int thirdLayerSize = 5;
+        float thirdStartX = centerX - ((thirdLayerSize - 1) * blockSpacing / 2);
+        for (int i = 0; i < thirdLayerSize; ++i) {
+            obstacles.push_back({ { thirdStartX + i * blockSpacing, groundY - blockHeight * 3, blockWidth, blockHeight }, true, ORANGE, BROWN });
         }
 
-        // Top blocks
-        obstacles.push_back({ { 785.0f, groundY - 160.0f, 30.0f, 40.0f }, true, RED, MAROON });
-        obstacles.push_back({ { 825.0f, groundY - 160.0f, 30.0f, 40.0f }, true, RED, MAROON });
+        // Fourth layer - 3 blocks wide
+        int fourthLayerSize = 3;
+        float fourthStartX = centerX - ((fourthLayerSize - 1) * blockSpacing / 2);
+        for (int i = 0; i < fourthLayerSize; ++i) {
+            obstacles.push_back({ { fourthStartX + i * blockSpacing, groundY - blockHeight * 4, blockWidth, blockHeight }, true, BLUE, DARKBLUE });
+        }
 
-        // Challenge: Floating platform with obstacles
-        obstacles.push_back({ { 650.0f, groundY - 140.0f, 80.0f, 15.0f }, true, GRAY, BLACK });  // Platform
-        obstacles.push_back({ { 670.0f, groundY - 170.0f, 30.0f, 30.0f }, true, BLUE, DARKBLUE });  // Block on platform
+        // Top layer - single block as the pinnacle
+        obstacles.push_back({ { centerX - blockWidth / 2, groundY - blockHeight * 5, blockWidth, blockHeight }, true, RED, MAROON });
 
         initialized = true;
     }
@@ -288,43 +302,82 @@ public:
 
 class Level2 : public Level {
 public:
-    Level2() : Level("Fortified Castle", 150) {}  // Increased target score from 120 to 150
+    Level2() : Level("Fortified Castle", 150) {}
 
     void Initialize(float groundY) override {
         obstacles.clear();
 
-        // Castle-like structure with defensive elements
-        // Main structure - base level with thicker walls
-        for (int i = 0; i < 8; ++i) {
-            obstacles.push_back({ { 740.0f + i * 40.0f, groundY - 100.0f, 30.0f, 100.0f }, true, GREEN, DARKGREEN });
+        // Constants for structure layout
+        const float blockSize = 40.0f;          // Standard block size
+        const float smallBlockSize = 20.0f;     // Size for smaller blocks
+        const float castleBaseX = 700.0f;       // Starting X position
+        const float baseWidth = 8 * blockSize;  // Width of castle base
+
+        // Base foundation - solid and aligned to ground
+        for (int i = 0; i < 8; i++) {
+            obstacles.push_back({ { castleBaseX + i * blockSize, groundY - blockSize, blockSize, blockSize }, true, GRAY, DARKGRAY });
+            obstacles.push_back({ { castleBaseX + i * blockSize, groundY - 2 * blockSize, blockSize, blockSize }, true, GRAY, DARKGRAY });
         }
 
-        // Second level wall sections
-        for (int i = 0; i < 7; ++i) {
-            if (i == 3) continue; // gap in the middle
-            obstacles.push_back({ { 750.0f + i * 40.0f, groundY - 160.0f, 30.0f, 60.0f }, true, YELLOW, GOLD });
+        // First level walls (3 blocks high)
+        // Left wall
+        obstacles.push_back({ { castleBaseX, groundY - 3 * blockSize, blockSize, blockSize }, true, SKYBLUE, DARKBLUE });
+        obstacles.push_back({ { castleBaseX, groundY - 4 * blockSize, blockSize, blockSize }, true, SKYBLUE, DARKBLUE });
+        obstacles.push_back({ { castleBaseX, groundY - 5 * blockSize, blockSize, blockSize }, true, SKYBLUE, DARKBLUE });
+
+        // Right wall
+        obstacles.push_back({ { castleBaseX + 7 * blockSize, groundY - 3 * blockSize, blockSize, blockSize }, true, SKYBLUE, DARKBLUE });
+        obstacles.push_back({ { castleBaseX + 7 * blockSize, groundY - 4 * blockSize, blockSize, blockSize }, true, SKYBLUE, DARKBLUE });
+        obstacles.push_back({ { castleBaseX + 7 * blockSize, groundY - 5 * blockSize, blockSize, blockSize }, true, SKYBLUE, DARKBLUE });
+
+        // Middle columns - first level (leaving space for entrance)
+        for (int i = 1; i < 7; i++) {
+            if (i == 3 || i == 4) continue; // Gate space
+            obstacles.push_back({ { castleBaseX + i * blockSize, groundY - 3 * blockSize, blockSize, blockSize }, true, SKYBLUE, DARKBLUE });
+            obstacles.push_back({ { castleBaseX + i * blockSize, groundY - 4 * blockSize, blockSize, blockSize }, true, SKYBLUE, DARKBLUE });
         }
 
-        // Horizontal reinforcement beams
-        obstacles.push_back({ { 740.0f, groundY - 110.0f, 300.0f, 20.0f }, true, RED, MAROON });
-        obstacles.push_back({ { 750.0f, groundY - 170.0f, 280.0f, 20.0f }, true, RED, MAROON });
-        obstacles.push_back({ { 760.0f, groundY - 230.0f, 260.0f, 20.0f }, true, RED, MAROON });
+        // First level top (horizontal beam)
+        for (int i = 0; i < 8; i++) {
+            obstacles.push_back({ { castleBaseX + i * blockSize, groundY - 5 * blockSize, blockSize, blockSize }, true, SKYBLUE, DARKBLUE });
+        }
 
-        // Defensive towers
-        obstacles.push_back({ { 760.0f, groundY - 280.0f, 30.0f, 60.0f }, true, BLUE, DARKBLUE });
-        obstacles.push_back({ { 830.0f, groundY - 280.0f, 30.0f, 60.0f }, true, BLUE, DARKBLUE });
-        obstacles.push_back({ { 900.0f, groundY - 280.0f, 30.0f, 60.0f }, true, BLUE, DARKBLUE });
-        obstacles.push_back({ { 970.0f, groundY - 280.0f, 30.0f, 60.0f }, true, BLUE, DARKBLUE });
+        // Second level towers
+        // Left tower
+        obstacles.push_back({ { castleBaseX, groundY - 6 * blockSize, blockSize, blockSize }, true, SKYBLUE, DARKBLUE });
+        obstacles.push_back({ { castleBaseX, groundY - 7 * blockSize, blockSize, blockSize }, true, SKYBLUE, DARKBLUE });
 
-        // Top roof structure
-        obstacles.push_back({ { 750.0f, groundY - 290.0f, 250.0f, 20.0f }, true, PURPLE, DARKPURPLE });
+        // Right tower
+        obstacles.push_back({ { castleBaseX + 7 * blockSize, groundY - 6 * blockSize, blockSize, blockSize }, true, SKYBLUE, DARKBLUE });
+        obstacles.push_back({ { castleBaseX + 7 * blockSize, groundY - 7 * blockSize, blockSize, blockSize }, true, SKYBLUE, DARKBLUE });
 
-        // Obstacle in the center - harder to reach
-        obstacles.push_back({ { 830.0f, groundY - 200.0f, 40.0f, 40.0f }, true, SKYBLUE, BLUE });
+        // Middle towers
+        obstacles.push_back({ { castleBaseX + 2 * blockSize, groundY - 6 * blockSize, blockSize, blockSize }, true, SKYBLUE, DARKBLUE });
+        obstacles.push_back({ { castleBaseX + 5 * blockSize, groundY - 6 * blockSize, blockSize, blockSize }, true, SKYBLUE, DARKBLUE });
 
-        // External defensive wall
-        obstacles.push_back({ { 700.0f, groundY - 70.0f, 20.0f, 70.0f }, true, DARKGRAY, BLACK });
-        obstacles.push_back({ { 1020.0f, groundY - 70.0f, 20.0f, 70.0f }, true, DARKGRAY, BLACK });
+        // Second level top
+        for (int i = 0; i < 8; i++) {
+            // Skip positions where there are no supporting blocks
+            if (i != 1 && i != 3 && i != 4 && i != 6) {
+                obstacles.push_back({ { castleBaseX + i * blockSize, groundY - 7 * blockSize, blockSize, blockSize }, true, SKYBLUE, DARKBLUE });
+            }
+        }
+
+        // Central keep (tower in center)
+        obstacles.push_back({ { castleBaseX + 3 * blockSize, groundY - 6 * blockSize, 2 * blockSize, blockSize }, true, BLUE, DARKBLUE });
+        obstacles.push_back({ { castleBaseX + 3 * blockSize, groundY - 7 * blockSize, 2 * blockSize, blockSize }, true, BLUE, DARKBLUE });
+        obstacles.push_back({ { castleBaseX + 3 * blockSize, groundY - 8 * blockSize, 2 * blockSize, blockSize }, true, BLUE, DARKBLUE });
+        obstacles.push_back({ { castleBaseX + 3 * blockSize, groundY - 9 * blockSize, 2 * blockSize, blockSize }, true, PURPLE, DARKPURPLE });
+
+        // Outer defensive wall
+        obstacles.push_back({ { castleBaseX - blockSize, groundY - blockSize, blockSize, blockSize }, true, DARKGRAY, BLACK });
+        obstacles.push_back({ { castleBaseX - blockSize, groundY - 2 * blockSize, blockSize, blockSize }, true, DARKGRAY, BLACK });
+
+        obstacles.push_back({ { castleBaseX + 8 * blockSize, groundY - blockSize, blockSize, blockSize }, true, DARKGRAY, BLACK });
+        obstacles.push_back({ { castleBaseX + 8 * blockSize, groundY - 2 * blockSize, blockSize, blockSize }, true, DARKGRAY, BLACK });
+
+        // Prize in the central keep
+        obstacles.push_back({ { castleBaseX + 3.5f * blockSize - smallBlockSize, groundY - 7.5f * blockSize, smallBlockSize * 2, smallBlockSize * 2 }, true, SKYBLUE, BLUE });
 
         initialized = true;
     }
@@ -332,67 +385,68 @@ public:
 
 class Level3 : public Level {
 public:
-    Level3() : Level("Stronghold", 250) {}  // Increased target score from 200 to 300
+    Level3() : Level("Stronghold", 250) {}
 
     void Initialize(float groundY) override {
         obstacles.clear();
 
-        // Heavily fortified multi-layer complex
+        // Simple variables
+        float centerX = 800.0f;
+        float baseY = groundY - 40.0f;
+        float blockSize = 40.0f;
 
-        // Outer defensive walls - thicker and taller
-        for (int i = 0; i < 7; ++i) {
-            obstacles.push_back({ { 650.0f, groundY - 40.0f - i * 40.0f, 40.0f, 40.0f }, true, GRAY, BLACK });
-            obstacles.push_back({ { 950.0f, groundY - 40.0f - i * 40.0f, 40.0f, 40.0f }, true, GRAY, BLACK });
-        }
+        // Create outer wall (black)
+        CreateSquare(centerX, baseY, 11, blockSize, BLACK, BLACK);
 
-        // Connecting outer walls bottom
-        for (int i = 0; i < 6; ++i) {
-            obstacles.push_back({ { 690.0f + i * 40.0f, groundY - 40.0f, 40.0f, 40.0f }, true, DARKGRAY, BLACK });
-        }
+        // Create second wall (dark gray)
+        CreateSquare(centerX, baseY - blockSize, 9, blockSize, DARKGRAY, BLACK);
 
-        // Connecting outer walls top
-        for (int i = 0; i < 6; ++i) {
-            obstacles.push_back({ { 690.0f + i * 40.0f, groundY - 280.0f, 40.0f, 40.0f }, true, DARKGRAY, BLACK });
-        }
+        // Create third wall (gray)
+        CreateSquare(centerX, baseY - 2 * blockSize, 7, blockSize, GRAY, DARKGRAY);
 
-        // Inner fortress - main towers
-        for (int i = 0; i < 5; ++i) {
-            obstacles.push_back({ { 700.0f, groundY - 80.0f - i * 40.0f, 40.0f, 40.0f }, true, BLUE, DARKBLUE });
-            obstacles.push_back({ { 900.0f, groundY - 80.0f - i * 40.0f, 40.0f, 40.0f }, true, BLUE, DARKBLUE });
-        }
+        // Create fourth wall (dark blue)
+        CreateSquare(centerX, baseY - 3 * blockSize, 5, blockSize, DARKBLUE, BLACK);
 
-        // Inner fortress - connecting walls
-        for (int i = 0; i < 4; ++i) {
-            obstacles.push_back({ { 740.0f + i * 40.0f, groundY - 80.0f, 40.0f, 40.0f }, true, RED, MAROON });
-            obstacles.push_back({ { 740.0f + i * 40.0f, groundY - 240.0f, 40.0f, 40.0f }, true, RED, MAROON });
-        }
+        // Create inner wall (blue)
+        CreateSquare(centerX, baseY - 4 * blockSize, 3, blockSize, BLUE, DARKBLUE);
 
-        // Central structure - layered and reinforced
-        obstacles.push_back({ { 780.0f, groundY - 120.0f, 40.0f, 40.0f }, true, GREEN, DARKGREEN });
-        obstacles.push_back({ { 820.0f, groundY - 120.0f, 40.0f, 40.0f }, true, GREEN, DARKGREEN });
-        obstacles.push_back({ { 780.0f, groundY - 160.0f, 40.0f, 40.0f }, true, YELLOW, GOLD });
-        obstacles.push_back({ { 820.0f, groundY - 160.0f, 40.0f, 40.0f }, true, YELLOW, GOLD });
-        obstacles.push_back({ { 780.0f, groundY - 200.0f, 80.0f, 40.0f }, true, PURPLE, DARKPURPLE });
-
-        // Diagonal reinforcements
-        obstacles.push_back({ { 740.0f, groundY - 120.0f, 40.0f, 20.0f }, true, ORANGE, BROWN });
-        obstacles.push_back({ { 860.0f, groundY - 120.0f, 40.0f, 20.0f }, true, ORANGE, BROWN });
-        obstacles.push_back({ { 740.0f, groundY - 200.0f, 40.0f, 20.0f }, true, ORANGE, BROWN });
-        obstacles.push_back({ { 860.0f, groundY - 200.0f, 40.0f, 20.0f }, true, ORANGE, BROWN });
-
-        // Floating defensive platforms
-        obstacles.push_back({ { 650.0f, groundY - 140.0f, 50.0f, 15.0f }, true, SKYBLUE, BLUE });
-        obstacles.push_back({ { 650.0f, groundY - 170.0f, 30.0f, 30.0f }, true, SKYBLUE, BLUE });
-
-        obstacles.push_back({ { 950.0f, groundY - 140.0f, 50.0f, 15.0f }, true, SKYBLUE, BLUE });
-        obstacles.push_back({ { 960.0f, groundY - 170.0f, 30.0f, 30.0f }, true, SKYBLUE, BLUE });
-
-        // High-value targets in difficult positions
-        obstacles.push_back({ { 800.0f, groundY - 320.0f, 40.0f, 40.0f }, true, GOLD, ORANGE });
+        // Add gold block in center (the prize)
+        obstacles.push_back({ { centerX - blockSize / 2, baseY - 5 * blockSize - blockSize / 2, blockSize, blockSize }, true, GOLD, ORANGE });
 
         initialized = true;
     }
+
+private:
+    // Helper function to create square walls
+    void CreateSquare(float centerX, float baseY, int size, float blockSize, Color mainColor, Color outlineColor) {
+        float offset = (size * blockSize) / 2.0f;
+
+        // Loop for all sides of the square
+        for (int i = 0; i < size; i++) {
+            // Bottom row
+            obstacles.push_back({ { centerX - offset + (i * blockSize), baseY, blockSize, blockSize },
+                                 true, mainColor, outlineColor });
+
+            // Top row
+            obstacles.push_back({ { centerX - offset + (i * blockSize), baseY - (size - 1) * blockSize,
+                                 blockSize, blockSize }, true, mainColor, outlineColor });
+
+            // Left side (skip corners)
+            if (i > 0 && i < size - 1) {
+                obstacles.push_back({ { centerX - offset, baseY - (i * blockSize),
+                                     blockSize, blockSize }, true, mainColor, outlineColor });
+            }
+
+            // Right side (skip corners)
+            if (i > 0 && i < size - 1) {
+                obstacles.push_back({ { centerX + offset - blockSize, baseY - (i * blockSize),
+                                     blockSize, blockSize }, true, mainColor, outlineColor });
+            }
+        }
+    }
 };
+
+
 
 class Level4 : public Level {
 public:
@@ -401,69 +455,44 @@ public:
     void Initialize(float groundY) override {
         obstacles.clear();
 
-        // Heavily protected multi-layered structure with maze-like components
+        // Constants for better readability
+        const float blockSize = 40.0f;
+        const float leftTowerX = 700.0f;
+        const float rightTowerX = 900.0f;
+        const float towerHeight = 10;  // Taller towers (10 blocks tall)
+        const float towerWidth = 3;    // 3 blocks wide towers
 
-        // Outer defensive perimeter - thick walls
-        for (int i = 0; i < 10; ++i) {
-            obstacles.push_back({ { 600.0f + i * 80.0f, groundY - 40.0f, 40.0f, 40.0f }, true, GRAY, BLACK });
+        // Left tower - blue blocks (3 blocks wide, taller)
+        for (int height = 0; height < towerHeight; height++) {
+            for (int width = 0; width < towerWidth; width++) {
+                obstacles.push_back({ { leftTowerX + width * blockSize, groundY - (height + 1) * blockSize, blockSize, blockSize }, true, BLUE, DARKBLUE });
+            }
         }
 
-        // Defensive towers
-        for (int i = 0; i < 6; ++i) {
-            obstacles.push_back({ { 600.0f, groundY - 40.0f - i * 40.0f, 40.0f, 40.0f }, true, BLUE, DARKBLUE });
-            obstacles.push_back({ { 1000.0f, groundY - 40.0f - i * 40.0f, 40.0f, 40.0f }, true, BLUE, DARKBLUE });
+        // Right tower - blue blocks (3 blocks wide, same height)
+        for (int height = 0; height < towerHeight; height++) {
+            for (int width = 0; width < towerWidth; width++) {
+                obstacles.push_back({ { rightTowerX + width * blockSize, groundY - (height + 1) * blockSize, blockSize, blockSize }, true, BLUE, DARKBLUE });
+            }
         }
 
-        // First inner wall
-        for (int i = 0; i < 8; ++i) {
-            obstacles.push_back({ { 640.0f + i * 40.0f, groundY - 80.0f, 40.0f, 40.0f }, true, RED, MAROON });
+        // Calculate exact length needed for the platform to span between towers
+        int platformLength = (rightTowerX - (leftTowerX + towerWidth * blockSize)) / blockSize;
+
+        // Horizontal platform connecting the two towers - using same BLUE color as towers
+        for (int i = 0; i < platformLength; i++) {
+            obstacles.push_back({ { leftTowerX + towerWidth * blockSize + i * blockSize, groundY - towerHeight * blockSize, blockSize, blockSize }, true, BLUE, DARKBLUE });
         }
 
-        // Second inner wall (offset)
-        for (int i = 0; i < 8; ++i) {
-            if (i == 3 || i == 4) continue; // gap in the middle
-            obstacles.push_back({ { 640.0f + i * 40.0f, groundY - 160.0f, 40.0f, 40.0f }, true, GREEN, DARKGREEN });
-        }
+        // Calculate exact center for the gold block
+        float centerX = leftTowerX + towerWidth * blockSize + (platformLength * blockSize) / 2.0f - blockSize / 2.0f;
 
-        // Third inner wall (alternating pattern)
-        for (int i = 0; i < 8; ++i) {
-            if (i % 2 == 0) continue; // skip even indices for alternating pattern
-            obstacles.push_back({ { 640.0f + i * 40.0f, groundY - 240.0f, 40.0f, 40.0f }, true, YELLOW, GOLD });
-        }
-
-        // Internal structure - box within a box
-        for (int i = 0; i < 6; ++i) {
-            // Outer box
-            if (i < 5) obstacles.push_back({ { 680.0f + i * 40.0f, groundY - 120.0f, 40.0f, 40.0f }, true, PURPLE, DARKPURPLE });
-            if (i < 5) obstacles.push_back({ { 680.0f + i * 40.0f, groundY - 280.0f, 40.0f, 40.0f }, true, PURPLE, DARKPURPLE });
-            if (i > 0 && i < 4) obstacles.push_back({ { 680.0f, groundY - 120.0f - i * 40.0f, 40.0f, 40.0f }, true, PURPLE, DARKPURPLE });
-            if (i > 0 && i < 4) obstacles.push_back({ { 840.0f, groundY - 120.0f - i * 40.0f, 40.0f, 40.0f }, true, PURPLE, DARKPURPLE });
-
-            // Inner box
-            if (i < 3) obstacles.push_back({ { 720.0f + i * 40.0f, groundY - 160.0f, 40.0f, 40.0f }, true, SKYBLUE, BLUE });
-            if (i < 3) obstacles.push_back({ { 720.0f + i * 40.0f, groundY - 240.0f, 40.0f, 40.0f }, true, SKYBLUE, BLUE });
-            if (i > 0 && i < 2) obstacles.push_back({ { 720.0f, groundY - 160.0f - i * 40.0f, 40.0f, 40.0f }, true, SKYBLUE, BLUE });
-            if (i > 0 && i < 2) obstacles.push_back({ { 800.0f, groundY - 160.0f - i * 40.0f, 40.0f, 40.0f }, true, SKYBLUE, BLUE });
-        }
-
-        // High value target in the center
-        obstacles.push_back({ { 760.0f, groundY - 200.0f, 40.0f, 40.0f }, true, GOLD, ORANGE });
-
-        // Floating and suspended obstacles
-        obstacles.push_back({ { 600.0f, groundY - 160.0f, 40.0f, 10.0f }, true, ORANGE, BROWN });
-        obstacles.push_back({ { 600.0f, groundY - 190.0f, 30.0f, 30.0f }, true, ORANGE, BROWN });
-
-        obstacles.push_back({ { 1000.0f, groundY - 160.0f, 40.0f, 10.0f }, true, ORANGE, BROWN });
-        obstacles.push_back({ { 1000.0f, groundY - 190.0f, 30.0f, 30.0f }, true, ORANGE, BROWN });
-
-        // Suspended platform with high-value target
-        obstacles.push_back({ { 760.0f, groundY - 320.0f, 120.0f, 10.0f }, true, DARKGRAY, BLACK });
-        obstacles.push_back({ { 800.0f, groundY - 350.0f, 40.0f, 30.0f }, true, GOLD, ORANGE });
+        // Gold block on top of the platform (precisely centered)
+        obstacles.push_back({ { centerX, groundY - (towerHeight + 1) * blockSize, blockSize, blockSize }, true, GOLD, ORANGE });
 
         initialized = true;
     }
 };
-
 class GameWorld {
 public:
     Ball ball;
