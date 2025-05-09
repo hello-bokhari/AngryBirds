@@ -112,11 +112,12 @@ void DrawCloud(int x, int y, int scale = 1) {
 class Button {
 private:
     Texture2D texture;
-    Vector2 position;
     float scale;
     bool wasPressed;
 
 public:
+    Vector2 position;  // Made public for easier access in the level selection menu
+
     Button(const char* imagePath, Vector2 imagePosition, float scale) : wasPressed(false) {
         Image image = LoadImage(imagePath);
         int originalwidth = image.width;
@@ -131,6 +132,7 @@ public:
         UnloadImage(image);
 
         position = imagePosition;
+        this->scale = scale;
     }
 
     ~Button() {
@@ -165,6 +167,14 @@ public:
         }
 
         return false;
+    }
+
+    int getWidth() const {
+        return texture.width;
+    }
+
+    int getHeight() const {
+        return texture.height;
     }
 };
 
@@ -226,12 +236,12 @@ public:
         }
 
         // Middle row - staggered for stability
-        for (int i = 0; i < 4; ++i) {
+        for (int i = 0; i < 5; ++i) {
             obstacles.push_back({ { 760.0f + i * 35.0f, groundY - 80.0f, 30.0f, 40.0f }, true, YELLOW, GOLD });
         }
 
         // Third row - narrower
-        for (int i = 0; i < 3; ++i) {
+        for (int i = 0; i < 4; ++i) {
             obstacles.push_back({ { 770.0f + i * 35.0f, groundY - 120.0f, 30.0f, 40.0f }, true, ORANGE, BROWN });
         }
 
@@ -293,7 +303,7 @@ public:
 
 class Level3 : public Level {
 public:
-    Level3() : Level("Impenetrable Stronghold", 300) {}  // Increased target score from 200 to 300
+    Level3() : Level("Stronghold", 250) {}  // Increased target score from 200 to 300
 
     void Initialize(float groundY) override {
         obstacles.clear();
@@ -355,12 +365,9 @@ public:
     }
 };
 
-// --- Additional difficulty modifications ---
-
-// Add a new, even more challenging level
 class Level4 : public Level {
 public:
-    Level4() : Level("Ultimate Challenge", 400) {}
+    Level4() : Level("Ultimate Challenge", 250) {}
 
     void Initialize(float groundY) override {
         obstacles.clear();
@@ -758,7 +765,7 @@ public:
 enum GameState {
     MENU,
     PLAYING,
-    LEVEL_SELECT,
+    LEVEL_SELECT,  // New state for level selection
     EXIT_GAME
 };
 
@@ -772,11 +779,19 @@ int main()
 
     // --- Menu Assets ---
     Texture2D background = LoadTexture("graphics/start_image.png");
+    Texture2D levelSelectBackground = LoadTexture("graphics/level_select_bg.png");  // Add a background for level select
 
     float buttonScale = 0.65f;
 
     Image startImage = LoadImage("graphics/start_button.png");
     Image exitImage = LoadImage("graphics/exit_button.png");
+    Image backImage = LoadImage("graphics/back_button.png");  // New back button
+
+    // Level button images
+    Image level1Image = LoadImage("graphics/level1_button.png");
+    Image level2Image = LoadImage("graphics/level2_button.png");
+    Image level3Image = LoadImage("graphics/level3_button.png");
+    Image level4Image = LoadImage("graphics/level4_button.png");
 
     int startButtonWidth = static_cast<int>(startImage.width * buttonScale);
     int startButtonHeight = static_cast<int>(startImage.height * buttonScale);
@@ -784,17 +799,48 @@ int main()
     int exitButtonWidth = static_cast<int>(exitImage.width * buttonScale);
     int exitButtonHeight = static_cast<int>(exitImage.height * buttonScale);
 
+    int backButtonWidth = static_cast<int>(backImage.width * buttonScale);
+    int backButtonHeight = static_cast<int>(backImage.height * buttonScale);
+
+    // Level button dimensions
+    int levelButtonWidth = static_cast<int>(level1Image.width * buttonScale);
+    int levelButtonHeight = static_cast<int>(level1Image.height * buttonScale);
+
     UnloadImage(startImage);
     UnloadImage(exitImage);
+    UnloadImage(backImage);
+    UnloadImage(level1Image);
+    UnloadImage(level2Image);
+    UnloadImage(level3Image);
+    UnloadImage(level4Image);
 
     float centerX_start = (screenWidth - startButtonWidth) / 2.0f;
     float centerX_exit = (screenWidth - exitButtonWidth) / 2.0f;
+    float centerX_back = 50.0f;  // Position back button at left side
 
     float startButtonY = screenHeight / 2.0f - 50;
     float exitButtonY = startButtonY + startButtonHeight + 20;
+    float backButtonY = screenHeight - backButtonHeight - 30;  // Position back button at bottom
+
+    // Calculate positions for level buttons
+    float levelButtonSpacing = 50.0f;
+    float totalLevelButtonsWidth = 4 * levelButtonWidth + 3 * levelButtonSpacing;
+    float levelButtonsStartX = (screenWidth - totalLevelButtonsWidth) / 2.0f;
+    float levelButtonY = screenHeight / 2.0f - levelButtonHeight / 2.0f;
 
     Button startButton("graphics/start_button.png", { centerX_start, startButtonY }, buttonScale);
     Button exitButton("graphics/exit_button.png", { centerX_exit, exitButtonY }, buttonScale);
+    Button backButton("graphics/back_button.png", { centerX_back, backButtonY }, buttonScale);
+
+    // Level selection buttons
+    Button level1Button("graphics/level1_button.png",
+        { levelButtonsStartX, levelButtonY }, buttonScale);
+    Button level2Button("graphics/level2_button.png",
+        { levelButtonsStartX + levelButtonWidth + levelButtonSpacing, levelButtonY }, buttonScale);
+    Button level3Button("graphics/level3_button.png",
+        { levelButtonsStartX + 2 * (levelButtonWidth + levelButtonSpacing), levelButtonY }, buttonScale);
+    Button level4Button("graphics/level4_button.png",
+        { levelButtonsStartX + 3 * (levelButtonWidth + levelButtonSpacing), levelButtonY }, buttonScale);
 
     // --- Game World ---
     GameWorld game;
@@ -802,10 +848,13 @@ int main()
 
     // Define title variables outside the switch
     const char* title = "Angry Birds";
+    const char* levelSelectTitle = "Select Level";
     int fontSize = 60;
+    int levelFontSize = 50;
 
     while (!WindowShouldClose())
     {
+        SetExitKey(KEY_NULL);
         Vector2 mousePosition = GetMousePosition();
 
         // --- Update depending on state ---
@@ -813,8 +862,7 @@ int main()
         case MENU: {
             // Check if the Start button is clicked
             if (startButton.isClicked(mousePosition)) {
-                game.Init();
-                state = PLAYING;
+                state = LEVEL_SELECT;  // Go to level select instead of playing
             }
 
             // Check if the Exit button is clicked
@@ -823,17 +871,45 @@ int main()
             }
             break;
         }
+        case LEVEL_SELECT: {
+            // Initialize game if not already initialized
+            if (!game.initialized) {
+                game.Init();
+            }
 
-        case PLAYING: {
-            game.Update();
+            // Check if level buttons are clicked
+            if (level1Button.isClicked(mousePosition)) {
+                game.SetLevel(1);
+                state = PLAYING;
+            }
+            else if (level2Button.isClicked(mousePosition)) {
+                game.SetLevel(2);
+                state = PLAYING;
+            }
+            else if (level3Button.isClicked(mousePosition)) {
+                game.SetLevel(3);
+                state = PLAYING;
+            }
+            else if (level4Button.isClicked(mousePosition)) {
+                game.SetLevel(4);
+                state = PLAYING;
+            }
 
-            // Add option to return to menu
-            if (IsKeyPressed(KEY_ESCAPE)) {
+            // Check if the Back button is clicked
+            if (backButton.isClicked(mousePosition)) {
                 state = MENU;
             }
             break;
         }
+        case PLAYING: {
+            game.Update();
 
+            // Add option to return to level select menu
+            if (IsKeyPressed(KEY_ESCAPE)) {
+                state = LEVEL_SELECT;
+            }
+            break;
+        }
         case EXIT_GAME:
             // Just to ensure proper exit
             break;
@@ -862,12 +938,55 @@ int main()
             exitButton.Draw();
             break;
         }
+        case LEVEL_SELECT: {
+            // Draw level selection background
+            if (levelSelectBackground.id > 0) {
+                DrawTexturePro(levelSelectBackground,
+                    { 0.0f, 0.0f, (float)levelSelectBackground.width, (float)levelSelectBackground.height },
+                    { 0.0f, 0.0f, (float)screenWidth, (float)screenHeight },
+                    { 0, 0 },
+                    0.0f,
+                    WHITE);
+            }
+            else {
+                ClearBackground(RAYWHITE);
+            }
 
+            // Draw level selection title
+            int levelTextWidth = MeasureText(levelSelectTitle, levelFontSize);
+            int levelTitleX = (screenWidth - levelTextWidth) / 2;
+            int levelTitleY = 100;
+
+            DrawText(levelSelectTitle, levelTitleX + 2, levelTitleY + 2, levelFontSize, DARKGRAY); // shadow
+            DrawText(levelSelectTitle, levelTitleX, levelTitleY, levelFontSize, BLACK);            // main text
+
+            // Draw level descriptions
+            int descFontSize = 18;
+            DrawText("Level 1: Starter Tower",
+                (int)level1Button.position.x, (int)(level1Button.position.y + levelButtonHeight + 10),
+                descFontSize, BLACK);
+            DrawText("Level 2: Fortified Castle",
+                (int)level2Button.position.x, (int)(level2Button.position.y + levelButtonHeight + 10),
+                descFontSize, BLACK);
+            DrawText("Level 3: Stronghold",
+                (int)level3Button.position.x, (int)(level3Button.position.y + levelButtonHeight + 10),
+                descFontSize, BLACK);
+            DrawText("Level 4: Ultimate Challenge",
+                (int)level4Button.position.x, (int)(level4Button.position.y + levelButtonHeight + 10),
+                descFontSize, BLACK);
+
+            // Draw level selection buttons
+            level1Button.Draw();
+            level2Button.Draw();
+            level3Button.Draw();
+            level4Button.Draw();
+            backButton.Draw();
+            break;
+        }
         case PLAYING: {
             game.Draw();
             break;
         }
-
         case EXIT_GAME:
             // No drawing needed for exit
             break;
@@ -884,7 +1003,9 @@ int main()
         game.Destroy();
     }
 
+    // Unload textures
     UnloadTexture(background);
+    UnloadTexture(levelSelectBackground);
     CloseWindow();
     return 0;
 }
