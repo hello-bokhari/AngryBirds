@@ -853,7 +853,7 @@ public:
 
         
         DrawText("Controls: 1,2,3,4 - Select Level | SPACE - Reset | ESC - Menu", 10, GetScreenHeight() - 30, 20, WHITE);
-        DrawText("Click the SPLIT button during flight to activate power-up!", 10, GetScreenHeight() - 60, 20, YELLOW);
+        DrawText("Left click during flight to activate power-up!", 10, GetScreenHeight() - 60, 20, YELLOW);
     }
 };
 
@@ -869,7 +869,7 @@ int main()
     const int screenWidth = 1280;
     const int screenHeight = 720;
 
-    InitWindow(screenWidth, screenHeight, "Angry Me :D - Multi-Level Edition");
+    InitWindow(screenWidth, screenHeight, "Angry Bird - by Abbad & Talal");
     SetTargetFPS(60);
 
     
