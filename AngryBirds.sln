@@ -5,6 +5,8 @@ VisualStudioVersion = 17.12.35707.178
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "AngryBirds", "AngryBirds.vcxproj", "{8A20E75B-8CED-45E7-A458-547852E7D4B4}"
 EndProject
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "Setup", "..\Setup\Setup.vdproj", "{4D1AC582-8087-5490-FCC2-03CEC5D22547}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
@@ -27,8 +29,18 @@ Global
 		{8A20E75B-8CED-45E7-A458-547852E7D4B4}.test|x64.Build.0 = test|x64
 		{8A20E75B-8CED-45E7-A458-547852E7D4B4}.test|x86.ActiveCfg = test|Win32
 		{8A20E75B-8CED-45E7-A458-547852E7D4B4}.test|x86.Build.0 = test|Win32
+		{4D1AC582-8087-5490-FCC2-03CEC5D22547}.Debug|x64.ActiveCfg = Debug
+		{4D1AC582-8087-5490-FCC2-03CEC5D22547}.Debug|x64.Build.0 = Debug
+		{4D1AC582-8087-5490-FCC2-03CEC5D22547}.Debug|x86.ActiveCfg = Debug
+		{4D1AC582-8087-5490-FCC2-03CEC5D22547}.Release|x64.ActiveCfg = Release
+		{4D1AC582-8087-5490-FCC2-03CEC5D22547}.Release|x86.ActiveCfg = Release
+		{4D1AC582-8087-5490-FCC2-03CEC5D22547}.test|x64.ActiveCfg = Debug
+		{4D1AC582-8087-5490-FCC2-03CEC5D22547}.test|x86.ActiveCfg = Debug
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {D23CE722-DF97-47E9-A912-71D903F85DFF}
 	EndGlobalSection
 EndGlobal
